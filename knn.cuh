@@ -26,7 +26,7 @@ __global__ void sortDistance_kernel(float* dist, int* idx, unsigned int w, unsig
 
 
 // Makes one call to calDistance_kernel and sortDistance_kernel with threads_per_block threads per block.
-void KNN(float* adj, unsigned int numAdj, float *tg, unsigned int dim, unsigned int k, float* dist, int* idx, unsigned int threads_per_block);
+void KNN(float* adj, unsigned int numAdj, float *tg, unsigned int dim, unsigned int k, float* dist, int* idx);
 
 #endif
 
