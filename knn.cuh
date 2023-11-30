@@ -8,11 +8,13 @@
 // Computes the distence between target point with all adjacent points provided
 // Each thread should compute one distance between the target and an adjacent point
 //
-// @param adj   adjacent points
-// @param tg    target point
-// @numAdj      number of adjacent points
+// @param A     adjacent points
+// @param B     target points
+// @param dist  distance matrix
+// @nA          number of adjacent points
+// @nB          number of target points
 // @dim         dimension of points
-__global__ void calDistance_kernel(float* adj, float* tg, unsigned int numAdj, unsigned int dim); 
+__global__ void calDistance_kernel(float* A, float* B, float* dist, unsigned int nA, unsigned int nB, unsigned int dim); 
 
 
 // Sort distances and select K-nearest points
