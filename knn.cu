@@ -54,3 +54,53 @@ __global__ void calDistance_kernel(float* A, float* B, float* dist, unsigned int
         dist[(Bg_a+ty)*nB + Bg_b+tx] = sum;
     }
 }
+
+__global__ void sortDistance_kernel(float* dist, int* idx, unsigned int w, unsigned int h, unsigned int k) {
+    unsigned_int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    float maxDist;
+    int i = 1, currRow;
+
+    if (tid < w) {
+        float* dist_col = dist + tid;
+        idx_col = idx + tid;
+
+        int l = 0, r = h-1;
+        // find the kth smallest element in dist and return their corresponding idx with quicksort
+        while (l < r) {
+            int pivot = dist_col[r * w];
+            int i = l-1;
+
+            for (int j=l; j<= r-1; j++) {
+                if (dist_col[j*w] <= pivot) {
+                    i++;
+                    // swap dist_col[i] and dist_col[j]
+                    int temp = dist_col[i*w];
+                    dist_col[i*w] = dist_col[j*w];
+                    dist_col[j*w] = temp;
+
+                    // swap there corresponding indices
+                    int temp_idx = idx_col[i*w];
+                    idx_col[i*w] = idx_col[j*w];
+                    idx_col[j*w] = temp_idx;
+                }
+            }
+
+            int temp = dist_col[(i+1)*w];
+            dist_col[(i+1)*w] = dist_col[r*w];
+            dist_col[r*w] = temp;
+
+            // swap corresponding indices
+            int temp_idx = idx_col[(i+1)*w];
+            idx_col[(i+1)*w] = idx_col[r*w];
+            idx_col[r*w] = temp_idx;
+
+            int partition_idx = i+1;
+
+            if (partition_idx == k) break;
+
+            if (partition_idx > k) r = partition_idx -1;
+            else l = partition_idx -1;
+            
+        }
+    }
+}
