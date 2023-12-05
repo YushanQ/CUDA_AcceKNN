@@ -1,6 +1,5 @@
 #include "knn.cuh"
 #include <stdio.h>
-
 #define BLOCK_DIM 16
 
 __global__ void calDistance_kernel(float* A, float* B, float* dist, unsigned int nA, unsigned int nB, unsigned int dim) {
@@ -103,4 +102,25 @@ __global__ void sortDistance_kernel(float* dist, int* idx, unsigned int w, unsig
             
         }
     }
+}
+
+void KNN(float* A, 
+         unsigned int nA, 
+         float *B, 
+         unsigned int nB, 
+         unsigned int dim, 
+         unsigned int k, 
+         float* dist, 
+         int* idx) {
+    
+    dim3 blk_dim_cal((nA+BLOCK_DIM-1)/BLOCK_DIM, (nB+BLOCK_DIM-1)/BLOCK_DIM, 1);
+    dim3 thrd_per_blk_cal(BLOCK_DIM, BLOCK_DIM, 1);
+
+    int thrd_per_blk_sort = BLOCK_DIM*BLOCK_DIM;
+    int blk_dim_sort = (nB + thrd_per_blk_sort -1) / thrd_per_blk_sort;
+    
+    calDistance_kernel<<<blk_dim_cal, thrd_per_blk_cal>>>(A, B, dist, nA, nB, dim);
+    sortDistance_kernel<<<blk_dim_sort, thrd_per_blk_sort>>>(dist, idx, nB, nA, k);
+
+    cudaDeviceSynchronize();
 }
