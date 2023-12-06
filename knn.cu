@@ -2,7 +2,7 @@
 #include <stdio.h>
 #define BLOCK_DIM 16
 
-__global__ void calDistance_kernel(float* A, float* B, float* dist, unsigned int nA, unsigned int nB, unsigned int dim) {
+__global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int nA, unsigned int nB, unsigned int dim) {
     __shared__ float sMem_a[BLOCK_DIM][BLOCK_DIM];
     __shared__ float sMem_b[BLOCK_DIM][BLOCK_DIM];
 
@@ -54,7 +54,7 @@ __global__ void calDistance_kernel(float* A, float* B, float* dist, unsigned int
     }
 }
 
-__global__ void sortDistance_kernel(float* dist, int* idx, unsigned int w, unsigned int h, unsigned int k) {
+__global__ void sortDistance_kernel(float *dist, int *idx, unsigned int w, unsigned int h, unsigned int k) {
     unsigned_int tid = blockIdx.x * blockDim.x + threadIdx.x;
     float maxDist;
     int i = 1, currRow;
@@ -104,14 +104,14 @@ __global__ void sortDistance_kernel(float* dist, int* idx, unsigned int w, unsig
     }
 }
 
-void KNN(float* A, 
+void KNN(float *A, 
          unsigned int nA, 
          float *B, 
          unsigned int nB, 
          unsigned int dim, 
          unsigned int k, 
-         float* dist, 
-         int* idx) {
+         float *dist, 
+         int *idx) {
     
     dim3 blk_dim_cal((nA+BLOCK_DIM-1)/BLOCK_DIM, (nB+BLOCK_DIM-1)/BLOCK_DIM, 1);
     dim3 thrd_per_blk_cal(BLOCK_DIM, BLOCK_DIM, 1);
