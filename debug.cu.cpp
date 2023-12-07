@@ -11,13 +11,14 @@ int main(int argc, char *argv[]) {
     int tg_test[8] = {4,8,12,16, 5,9,13,17};
     int y_test[10] = {0, 1, 0, 1, 1, 1, 0, 0, 1, 1};
 
-    float *A, *B, *dist, *idx;
+    float *A, *B, *dist;
+    int *idx;
     cudaMallocManaged((void **)&A, sizeof(float) * 20);
   	cudaMallocManaged((void **)&B, sizeof(float) * 8);
     cudaMallocManaged((void **)&dist, sizeof(float) * 40);
     cudaMallocManaged((void **)&idx, sizeof(float) * 40);
-    A = adj_test;
-    B = tg_test;
+    A = (float*)adj_test;
+    B = (float*)tg_test;
 
     for (unsigned int i=0; i<10; i++) {
         for (unsigned int j=0; j<4; j++) {
@@ -27,14 +28,14 @@ int main(int argc, char *argv[]) {
     }
 
     //KNN(float* A, unsigned int nA, float *B, unsigned int nB, unsigned int dim, unsigned int k, float* dist, int* idx)
-    KNN(A, nA=10, B, nB=4, dim=2, k=3, dist, idx);
+    int nA=10, nB=4, dim=2, k=3;
+    KNN(A, nA, B, nB, dim, k, dist, idx);
 
     // get the catagory based on idx matrix
     int cnt[4][3]{};
-    int k=3;
-    for (unsigned int i=0; i<k; i++) {
-        for (unsigned int j=0; j<4; j++) {
-            int cat = idx[i*4+j];
+    for (int i=0; i<k; i++) {
+        for (int j=0; j<4; j++) {
+            int cat = y_test[idx[i*4+j]];
             cnt[j][cat]++;
         }
     }
@@ -42,7 +43,7 @@ int main(int argc, char *argv[]) {
     int ans[4]{};
     int catagory_num = 2;
     for (int i=0; i<4; i++) {
-        int rec = MIN_INT;
+        int rec = 0;
         for (int j=0; j<catagory_num; j++) {
             if (cnt[i][j]) {
                 rec = max(rec, cnt[i][j]);
