@@ -13,11 +13,18 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
 
     // setting start and end range
     // checking matrix A by y, and matrix B by x, because we will consider cross multiply
-    __shared__ int Bg_a = BLOCK_DIM * blockIdx.y;
-    __shared__ int Sp_a = BLOCK_DIM * nA;           // moving begin pointer down the matrix
-    __shared__ int Ed_a = Bg_a + nA * (dim-1);      // end at the last element in the matrix
-    __shared__ int Bg_b = BLOCK_DIM * blockIdx.x;
-    __shared__ int Ed_b = BLOCK_DIM * nB;
+    // __shared__ int Bg_a = BLOCK_DIM * blockIdx.y;
+    // __shared__ int Sp_a = BLOCK_DIM * nA;           // moving begin pointer down the matrix
+    // __shared__ int Ed_a = Bg_a + nA * (dim-1);      // end at the last element in the matrix
+    // __shared__ int Bg_b = BLOCK_DIM * blockIdx.x;
+    // __shared__ int Ed_b = BLOCK_DIM * nB;
+
+    __shared__ int Bg_a, Sp_a, Ed_a, Bg_b, Sp_b;
+    Bg_a = BLOCK_DIM * blockIdx.y;
+    Sp_a = BLOCK_DIM * nA; 
+    Ed_a = Bg_a + nA * (dim-1);
+    Bg_b = BLOCK_DIM * blockIdx.x;
+    Sp_b = BLOCK_DIM * nB;
 
     for (int i=Bg_a, j=Bg_b; i<Ed_a; i+=Sp_a, j+=Sp_b) {
         // add element value to share memory, if index i is out-of-bound, fill shared memory with 0
@@ -55,13 +62,11 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
 }
 
 __global__ void sortDistance_kernel(float *dist, int *idx, unsigned int w, unsigned int h, unsigned int k) {
-    unsigned_int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    float maxDist;
-    int i = 1, currRow;
-
+    unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    
     if (tid < w) {
         float* dist_col = dist + tid;
-        idx_col = idx + tid;
+        int* idx_col = idx + tid;
 
         int l = 0, r = h-1;
         // find the kth smallest element in dist and return their corresponding idx with quicksort

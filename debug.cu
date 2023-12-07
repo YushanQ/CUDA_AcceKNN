@@ -47,10 +47,16 @@ int main(int argc, char *argv[]) {
         for (int j=0; j<catagory_num; j++) {
             if (cnt[i][j]) {
                 rec = max(rec, cnt[i][j]);
+                if (rec == cnt[i][j]) {
+                  ans[i] = j;
+                }
             }
         }
-        ans[i] = rec;
+        // ans[i] = rec;
     }
+    //这里写错了，不是最大的count，是最大count对应的坐标
 
-    cout << ans << endl;
+    for (auto a:ans) {
+      cout<<a<<endl;
+    }
 }
