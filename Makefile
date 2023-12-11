@@ -1,0 +1,1 @@
+!nvcc debug.cu knn.cu -Xcompiler -O3 -Xcompiler -Wall -Xptxas -O3 -std c++17 -o debug

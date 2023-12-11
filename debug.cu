@@ -7,8 +7,8 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-    int adj_test[20] = {1,2,3,5,7,9,11,13,15,17, 2,3,4,6,8,10,12,14,16,18};
-    int tg_test[8] = {4,8,12,16, 5,9,13,17};
+    float adj_test[20] = {1,2,3,5,7,9,11,13,15,17, 2,3,4,6,8,10,12,14,16,18};
+    float tg_test[8] = {4,8,12,16, 5,9,13,17};
     int y_test[10] = {0, 1, 0, 1, 1, 1, 0, 0, 1, 1};
 
     float *A, *B, *dist;
@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
   	cudaMallocManaged((void **)&B, sizeof(float) * 8);
     cudaMallocManaged((void **)&dist, sizeof(float) * 40);
     cudaMallocManaged((void **)&idx, sizeof(float) * 40);
-    A = (float*)adj_test;
-    B = (float*)tg_test;
+    cudaMemcpy(A, adj_test, 20 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(B, tg_test, 8 * sizeof(float), cudaMemcpyHostToDevice);
 
     for (unsigned int i=0; i<10; i++) {
         for (unsigned int j=0; j<4; j++) {
@@ -30,6 +30,15 @@ int main(int argc, char *argv[]) {
     //KNN(float* A, unsigned int nA, float *B, unsigned int nB, unsigned int dim, unsigned int k, float* dist, int* idx)
     int nA=10, nB=4, dim=2, k=3;
     KNN(A, nA, B, nB, dim, k, dist, idx);
+
+    // Display the distance matrix
+    // cout << "Distance Matrix:" << endl;
+    // for (int i = 0; i < nA; ++i) {
+    //     for (int j = 0; j < nB; ++j) {
+    //         cout << dist[i*nB + j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
     // get the catagory based on idx matrix
     int cnt[4][3]{};
@@ -56,7 +65,7 @@ int main(int argc, char *argv[]) {
     }
     //这里写错了，不是最大的count，是最大count对应的坐标
 
-    for (auto a:ans) {
-      cout<<a<<endl;
-    }
+    // for (auto a:ans) {
+    //   cout<<a<<endl;
+    // }
 }

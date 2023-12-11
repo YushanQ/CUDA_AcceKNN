@@ -1,6 +1,8 @@
 #include "knn.cuh"
 #include <stdio.h>
+#include <iostream>
 #define BLOCK_DIM 16
+using namespace std;
 
 __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int nA, unsigned int nB, unsigned int dim) {
     __shared__ float sMem_a[BLOCK_DIM][BLOCK_DIM];
@@ -28,6 +30,13 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
 
     for (int i=Bg_a, j=Bg_b; i<Ed_a; i+=Sp_a, j+=Sp_b) {
         // add element value to share memory, if index i is out-of-bound, fill shared memory with 0
+        // if (tx==0 && ty ==0) {
+        //   printf("dim is %d, ", dim);
+        //   printf("i/nA + ty is %d, ", i/nA + ty);
+        //   printf("Bg_a + tx is %d, ", Bg_a + tx);
+        //   printf("A value is %f", A[i + ty*nA + tx]);
+        //   printf("here");
+        // }
         if (i/nA + ty < dim) {
             if (Bg_a + tx < nA) {
                 sMem_a[ty][tx] = A[i + ty*nA + tx];
@@ -35,11 +44,31 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
                 sMem_a[ty][tx] = 0;
             }
 
+            // if (tx==0 && ty ==0) {
+            //   printf("%.2f\n", sMem_a[ty][tx]);
+            //   // should be 1 here
+            // }
+
+            // if (tx==0 && ty ==1) {
+            //   printf("%.2f\n", sMem_a[ty][tx]);
+            //   // should be 2 here
+            // }
+
             if (Bg_b + tx < nB) {
-                sMem_b[ty][tx] = B[j + ty*nA + tx];
+                sMem_b[ty][tx] = B[j + ty*nB + tx];
             } else {
                 sMem_b[ty][tx] = 0;
             }
+
+            // if (tx==0 && ty ==0) {
+            //   printf("%.2f\n", sMem_b[ty][tx]);
+            //   // should be 4 here
+            // }
+
+            // if (tx==0 && ty ==1) {
+            //   printf("%.2f\n", sMem_b[ty][tx]);
+            //   // should be 5 here
+            // }
         } else {
             sMem_a[ty][tx] = 0;
             sMem_b[ty][tx] = 0;
@@ -50,6 +79,9 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
         if (Bg_b + tx < nB && Bg_a + ty < nA) {
             for (int k=0; k<BLOCK_DIM; k++) {
                 sum += pow(sMem_a[k][ty] - sMem_b[k][tx], 2);
+                // if (tx==0 && ty ==0) {
+                //   printf("%.2f\n", sum);
+                // }
             }
         }
         __syncthreads();
@@ -57,7 +89,13 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
 
     // store dist in dist matrix
     if (Bg_b + tx < nB && Bg_a + ty < nA) {
+        // if (tx==0 && ty ==0) {
+        //   printf("%.2f\n", sum);
+        // }
         dist[(Bg_a+ty)*nB + Bg_b+tx] = sum;
+        // if (tx==3 && ty == 9) {
+        //   printf("dist: %.2f\n", dist[0]);
+        // }   
     }
 }
 
@@ -123,9 +161,32 @@ void KNN(float *A,
 
     int thrd_per_blk_sort = BLOCK_DIM*BLOCK_DIM;
     int blk_dim_sort = (nB + thrd_per_blk_sort -1) / thrd_per_blk_sort;
-    
+
     calDistance_kernel<<<blk_dim_cal, thrd_per_blk_cal>>>(A, B, dist, nA, nB, dim);
+    
+    cout << "Distance Matrix in KNN.CU:" << endl;
+    // for (unsigned int i=0; i<20; i++) {
+    //   cout << dist[i] << " ";
+    // }
+    // there is no output may be attribute to asyn in cpu & gpu
+
     sortDistance_kernel<<<blk_dim_sort, thrd_per_blk_sort>>>(dist, idx, nB, nA, k);
 
     cudaDeviceSynchronize();
+
+    // for (int i = 0; i < nA; ++i) {
+    //     for (int j = 0; j < nB; ++j) {
+    //         cout << dist[i*nB + j] << " ";
+    //     }
+    //     cout << endl;
+    // }
+
+    // cout << "below is index matrix" << endl;
+    // for (int i = 0; i < nA; ++i) {
+    //     for (int j = 0; j < nB; ++j) {
+    //         cout << idx[i*nB + j] << " ";
+    //     }
+    //     cout << endl;
+    // }
+    
 }
