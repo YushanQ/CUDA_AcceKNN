@@ -99,6 +99,8 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
     }
 }
 
+
+// may had to rewrite sort
 __global__ void sortDistance_kernel(float *dist, int *idx, unsigned int w, unsigned int h, unsigned int k) {
     unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
@@ -156,7 +158,7 @@ void KNN(float *A,
          float *dist, 
          int *idx) {
     
-    dim3 blk_dim_cal((nA+BLOCK_DIM-1)/BLOCK_DIM, (nB+BLOCK_DIM-1)/BLOCK_DIM, 1);
+    dim3 blk_dim_cal((nB+BLOCK_DIM-1)/BLOCK_DIM, (nA+BLOCK_DIM-1)/BLOCK_DIM, 1);
     dim3 thrd_per_blk_cal(BLOCK_DIM, BLOCK_DIM, 1);
 
     int thrd_per_blk_sort = BLOCK_DIM*BLOCK_DIM;
@@ -164,7 +166,7 @@ void KNN(float *A,
 
     calDistance_kernel<<<blk_dim_cal, thrd_per_blk_cal>>>(A, B, dist, nA, nB, dim);
     
-    cout << "Distance Matrix in KNN.CU:" << endl;
+    // cout << "Distance Matrix in KNN.CU:" << endl;
     // for (unsigned int i=0; i<20; i++) {
     //   cout << dist[i] << " ";
     // }
@@ -174,19 +176,19 @@ void KNN(float *A,
 
     cudaDeviceSynchronize();
 
-    // for (int i = 0; i < nA; ++i) {
-    //     for (int j = 0; j < nB; ++j) {
-    //         cout << dist[i*nB + j] << " ";
-    //     }
-    //     cout << endl;
-    // }
+    for (int i = 0; i < nA; ++i) {
+        for (int j = 0; j < nB; ++j) {
+            cout << dist[i*nB + j] << " ";
+        }
+        cout << endl;
+    }
 
-    // cout << "below is index matrix" << endl;
-    // for (int i = 0; i < nA; ++i) {
-    //     for (int j = 0; j < nB; ++j) {
-    //         cout << idx[i*nB + j] << " ";
-    //     }
-    //     cout << endl;
-    // }
+    cout << "below is index matrix" << endl;
+    for (int i = 0; i < nA; ++i) {
+        for (int j = 0; j < nB; ++j) {
+            cout << idx[i*nB + j] << " ";
+        }
+        cout << endl;
+    }
     
 }

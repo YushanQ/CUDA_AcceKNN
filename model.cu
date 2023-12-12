@@ -1,4 +1,4 @@
-'''
+/*
 we conduct KNN model on iris dataset (https://www.kaggle.com/datasets/arshid/iris-flower-dataset).
 
 About the dataset
@@ -10,7 +10,7 @@ we treat the 4 attributes - Petal Length, Petal Width, Sepal Length, Sepal width
 and make classification based on their corresponding species via CUDA-KNN model.
 We split the dataset by 80% train set and 20% test set, and set k=5(or 3?)
 For convenience, we preprocess the dataset, shuffle and split it into 2 files - train.csv and test.csv 
-'''
+*/
 
 #include "knn.cuh"
 #include <iostream>
@@ -18,17 +18,37 @@ For convenience, we preprocess the dataset, shuffle and split it into 2 files - 
 #include <stdio.h>
 #include <algorithm>
 #include <random>
+#include <fstream>
+#include <sstream> 
 
 using namespace std;
+vector<vector<float>> Read_file(string filename);
+void Write_file(vector<float> &arr);
 
 int main(int argc, char *argv[]) {
     int k = atoi(argv[1]);
     // read file
-    vector<vector<float>> data_train, data_test;
-    Read_file(data_train, true);
-    Read_file(data_test, false);
+    vector<vector<float>> data_train; 
+    vector<vector<float>> data_test;
+    cout << "here0\n";
+    data_train = Read_file("train.csv");
+    data_test = Read_file("test.csv");
+    // cout << "below is test data" << endl;
+    // for (auto arr:data_test) {
+    //   for (auto e : arr) {
+    //     cout << e << ",";
+    //   }
+    // }
+    // cout << "below is train data" << endl;
+    // for (auto arr:data_train) {
+    //   for (auto e : arr) {
+    //     cout << e << ",";
+    //   }
+    // }
+    // cout << endl;
+    
     int m_a = data_train.size(), n_a = data_train[0].size();
-    int m_b = data_test.size(), n_b = data_test.size();
+    int m_b = data_test.size(), n_b = data_test[0].size();
 
     // generate A and B matrix
     int sz_a = (m_a-1) * n_a;
@@ -44,12 +64,11 @@ int main(int argc, char *argv[]) {
     for (int i=0; i<m_a-1; ++i) {
         for (int j=0; j<n_a; ++j) {
             A[i*n_a + j] = data_train[i][j];
+            
         }
     }
 
-    for (int j=0; j<n_a; ++j) {
-        A_catagory[j] = data_train[m_a-1][j];
-    }
+    A_catagory = data_train[m_a-1].data();
 
     for (int i=0; i<m_b-1; ++i) {
         for (int j=0; j<n_b; ++j) {
@@ -57,15 +76,32 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    for (unsigned int i=0; i<n_a; i++) {
-        for (unsigned int j=0; j<n_b; j++) {
+    for (int i=0; i<n_a; i++) {
+        for (int j=0; j<n_b; j++) {
             dist[i*n_b+j] = 0.0f;
             idx[i*n_b+j] = i;
         }
     }
-
+    cout << "here2"<<endl;
     KNN(A, n_a, B, n_b, m_a-1, k, dist, idx);
 
+    // cout << "below is distance matrix" << endl;
+    // for (int i = 0; i < n_a; ++i) {
+    //     for (int j = 0; j < n_b; ++j) {
+    //         cout << dist[i*n_b + j] << " ";
+    //     }
+    //     cout << endl;
+    // }
+
+    // cout << "below is index matrix" << endl;
+    // for (int i = 0; i < n_a; ++i) {
+    //     for (int j = 0; j < n_b; ++j) {
+    //         cout << idx[i*n_b + j] << " ";
+    //     }
+    //     cout << endl;
+    // }
+
+    
     // get the catagory based on idx matrix
     int cnt[n_b][3]{};
     for (int i=0; i<k; i++) {
@@ -75,55 +111,97 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // return the maximun frequency as result
+    vector<float> result;
+    for (int i=0; i<n_b; i++) {
+        auto curr = cnt[i];
+        float predict_cat = max_element(curr, curr+3) - curr;
+        result.push_back(predict_cat);
+    }
 
+    Write_file(result);
+    // for (auto ele : result) {
+    //   cout << ele << endl;
+    // }
 
-
-
+    return 0;
 }
 
-vector<vector<float>> Read_file(vector<vector<float>> &dataset, bool train) {
-    string filename = train ? "train.csv" : "test.csv";
-    
+vector<vector<float>> Read_file(string filename) {  
+    vector<vector<float>> dataset;
     vector<float> petal_len, petal_wid, sepal_len, sepal_wid, species;
     float petal_len_i, petal_wid_i, sepal_len_i, sepal_wid_i;
     string catagory, line;
-    ifstream myfile(filename);
+    ifstream inFile(filename);
+    // Close the file
+    inFile.close();
+
+    // Reopen the file
+    inFile.open(filename);
     int cnt = 0, cat = -1;
 
-    if (myfile.is_open()) {
-        cout << "starts reading file..." << endl;
-        while (getline(myfile, line)) {
+    if (inFile.is_open()) {
+        cout << "starts reading file " << filename << endl;
+        while (getline(inFile, line)) {
+           // skip the header
+            if (cnt == 0) {
+              cnt++;
+              continue;
+            }; 
+
             replace(line.begin(), line.end(), '-', '_');
             replace(line.begin(), line.end(), ',', ' ');
             istringstream iss(line);
             cnt++;
-
             iss >> sepal_len_i >> sepal_wid_i >> petal_len_i >> petal_wid_i >> catagory;
+            
+            // check iss failure
+            if (iss.fail()) {
+                cerr << "Error reading line from file: " << filename << endl;
+                continue;
+            }
+            
             sepal_len.push_back(sepal_len_i);
             sepal_wid.push_back(sepal_wid_i);
             petal_len.push_back(petal_len_i);
             petal_wid.push_back(petal_wid_i);
             
-            switch(catagory) {
-                case "Iris_setosa":
-                    cat = 0; 
-                    break;
-                case "Iris-versicolor":
-                    cat = 1; 
-                    break;
-                case "Iris-virginica":
-                    cat = 2; 
-                    break;
+            if (catagory == "Iris_setosa") {
+                cat = 0;
+            } else if (catagory == "Iris_versicolor") {
+                cat = 1;
+            } else if (catagory == "Iris_virginica") {
+                cat = 2;
+            } else {
+                cat = -1;
             }
             species.push_back(cat);
         }
+        inFile.close();
+        inFile.clear();
         dataset.push_back(sepal_len);
         dataset.push_back(sepal_wid);
         dataset.push_back(petal_len);
         dataset.push_back(petal_wid);
-        dataset.push_back(species);  
+        dataset.push_back(species);    
     } else {
         cerr << "Error. Please check if file exists";
+    }
+    cout << "finishes reading file " << filename << endl;
+    return dataset;
+}
+
+void Write_file(vector<float> &arr) {
+    ofstream outFile("result.txt");
+    if (outFile.is_open()) {
+        cout << "starts outputing file..." << endl;
+        // for (auto i=0; i<arr.size(); i++) {
+        //     outFile << i << ":" << arr[i] << "\n";
+        // }
+        for (const auto &e : arr) outFile << e << "\n";
+        outFile.close();
+    } else {
+        cerr << "Error opening the file." << endl;
     }
 }
 
