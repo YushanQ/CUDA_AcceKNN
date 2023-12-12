@@ -4,6 +4,63 @@
 #define BLOCK_DIM 16
 using namespace std;
 
+__device__ void swap(float *dist, int *idx, int i, int j, int w) {
+    float temp_dist = dist[i*w];
+    dist[i*w] = dist[j*w];
+    dist[j*w] = temp_dist;
+
+    int temp_idx = idx[i*w];
+    idx[i*w] = idx[j*w];
+    idx[j*w] = temp_idx;
+}
+
+
+__device__ int partition(float *dist_col, int *idx_col, int start, int end, int w) {
+    if (start == 8) {
+      printf("is called!\n");
+    }
+    float pivot = dist_col[end*w];
+    int i = start - 1;
+
+    for (int j = start; j < end; j++) {
+        if (dist_col[j*w] <= pivot) {
+            // if (end == 119) {
+            //   printf("next %.2f\n", dist_col[j*w]);
+            // }
+            i++;
+            swap(dist_col, idx_col, i, j, w);
+        }
+    }
+    swap(dist_col, idx_col, i+1, end, w);
+    // if (end == 119) {
+    printf("Partitioning: start = %d, end = %d, pivot index = %d\n", start, end, i+1);
+    // }
+    
+    return i+1;
+}
+
+
+__device__ void quicksort(float *dist_col, int *idx_col, int start, int end, int w) {
+    printf("Quicksort called: start = %d, end = %d\n", start, end);
+    if (start < end) {
+      
+      int pivot_idx = partition(dist_col, idx_col, start, end, w);
+      
+
+      // Recursively sort the two parts
+      // printf("right part is %d, end is %d\n", pivot_idx + 1, end);
+      if (pivot_idx == 7) {
+        printf("ready to call sort1\n");
+      }
+      quicksort(dist_col, idx_col, start, pivot_idx - 1, w);
+      if (pivot_idx == 7) {
+        printf("return from sort1\n");
+      }
+      quicksort(dist_col, idx_col, pivot_idx + 1, end, w);
+    }
+}
+
+
 __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int nA, unsigned int nB, unsigned int dim) {
     __shared__ float sMem_a[BLOCK_DIM][BLOCK_DIM];
     __shared__ float sMem_b[BLOCK_DIM][BLOCK_DIM];
@@ -104,50 +161,15 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
 __global__ void sortDistance_kernel(float *dist, int *idx, unsigned int w, unsigned int h, unsigned int k) {
     unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
-    if (tid < w) {
+    if (tid == 0) {
         float* dist_col = dist + tid;
         int* idx_col = idx + tid;
-
-        int l = 0, r = h-1;
         // find the kth smallest element in dist and return their corresponding idx with quicksort
-        while (l < r) {
-            int pivot = dist_col[r * w];
-            int i = l-1;
-
-            for (int j=l; j<= r-1; j++) {
-                if (dist_col[j*w] <= pivot) {
-                    i++;
-                    // swap dist_col[i] and dist_col[j]
-                    int temp = dist_col[i*w];
-                    dist_col[i*w] = dist_col[j*w];
-                    dist_col[j*w] = temp;
-
-                    // swap there corresponding indices
-                    int temp_idx = idx_col[i*w];
-                    idx_col[i*w] = idx_col[j*w];
-                    idx_col[j*w] = temp_idx;
-                }
-            }
-
-            int temp = dist_col[(i+1)*w];
-            dist_col[(i+1)*w] = dist_col[r*w];
-            dist_col[r*w] = temp;
-
-            // swap corresponding indices
-            int temp_idx = idx_col[(i+1)*w];
-            idx_col[(i+1)*w] = idx_col[r*w];
-            idx_col[r*w] = temp_idx;
-
-            int partition_idx = i+1;
-
-            if (partition_idx == k) break;
-
-            if (partition_idx > k) r = partition_idx -1;
-            else l = partition_idx -1;
-            
-        }
+        quicksort(dist_col, idx_col, 0, h-1, w); 
+        
     }
 }
+
 
 void KNN(float *A, 
          unsigned int nA, 
@@ -172,23 +194,23 @@ void KNN(float *A,
     // }
     // there is no output may be attribute to asyn in cpu & gpu
 
-    sortDistance_kernel<<<blk_dim_sort, thrd_per_blk_sort>>>(dist, idx, nB, nA, k);
+    sortDistance_kernel<<<1, thrd_per_blk_sort>>>(dist, idx, nB, nA, k);
 
     cudaDeviceSynchronize();
 
-    for (int i = 0; i < nA; ++i) {
-        for (int j = 0; j < nB; ++j) {
-            cout << dist[i*nB + j] << " ";
-        }
-        cout << endl;
-    }
+    // for (int i = 0; i < nA; ++i) {
+    //     for (int j = 0; j < nB; ++j) {
+    //         cout << dist[i*nB + j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
-    cout << "below is index matrix" << endl;
-    for (int i = 0; i < nA; ++i) {
-        for (int j = 0; j < nB; ++j) {
-            cout << idx[i*nB + j] << " ";
-        }
-        cout << endl;
-    }
+    // cout << "below is index matrix" << endl;
+    // for (int i = 0; i < nA; ++i) {
+    //     for (int j = 0; j < nB; ++j) {
+    //         cout << idx[i*nB + j] << " ";
+    //     }
+    //     cout << endl;
+    // }
     
 }
