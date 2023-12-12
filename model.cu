@@ -23,29 +23,16 @@ For convenience, we preprocess the dataset, shuffle and split it into 2 files - 
 
 using namespace std;
 vector<vector<float>> Read_file(string filename);
-void Write_file(vector<float> &arr);
+void Write_file(vector<float> &arr, int k);
 
 int main(int argc, char *argv[]) {
     int k = atoi(argv[1]);
     // read file
     vector<vector<float>> data_train; 
     vector<vector<float>> data_test;
-    cout << "here0\n";
+
     data_train = Read_file("train.csv");
     data_test = Read_file("test.csv");
-    // cout << "below is test data" << endl;
-    // for (auto arr:data_test) {
-    //   for (auto e : arr) {
-    //     cout << e << ",";
-    //   }
-    // }
-    // cout << "below is train data" << endl;
-    // for (auto arr:data_train) {
-    //   for (auto e : arr) {
-    //     cout << e << ",";
-    //   }
-    // }
-    // cout << endl;
     
     int m_a = data_train.size(), n_a = data_train[0].size();
     int m_b = data_test.size(), n_b = data_test[0].size();
@@ -82,25 +69,8 @@ int main(int argc, char *argv[]) {
             idx[i*n_b+j] = i;
         }
     }
-    cout << "here2"<<endl;
+
     KNN(A, n_a, B, n_b, m_a-1, k, dist, idx);
-
-    // cout << "below is distance matrix" << endl;
-    // for (int i = 0; i < n_a; ++i) {
-    //     for (int j = 0; j < n_b; ++j) {
-    //         cout << dist[i*n_b + j] << " ";
-    //     }
-    //     cout << endl;
-    // }
-
-    // cout << "below is index matrix" << endl;
-    // for (int i = 0; i < n_a; ++i) {
-    //     for (int j = 0; j < n_b; ++j) {
-    //         cout << idx[i*n_b + j] << " ";
-    //     }
-    //     cout << endl;
-    // }
-
     
     // get the catagory based on idx matrix
     int cnt[n_b][3]{};
@@ -119,10 +89,7 @@ int main(int argc, char *argv[]) {
         result.push_back(predict_cat);
     }
 
-    Write_file(result);
-    // for (auto ele : result) {
-    //   cout << ele << endl;
-    // }
+    Write_file(result, k);
 
     return 0;
 }
@@ -191,8 +158,10 @@ vector<vector<float>> Read_file(string filename) {
     return dataset;
 }
 
-void Write_file(vector<float> &arr) {
-    ofstream outFile("result.txt");
+void Write_file(vector<float> &arr, int k) {
+    stringstream ss;
+    ss << "result_" << k << ".txt";
+    ofstream outFile(ss.str());
     if (outFile.is_open()) {
         cout << "starts outputing file..." << endl;
         // for (auto i=0; i<arr.size(); i++) {

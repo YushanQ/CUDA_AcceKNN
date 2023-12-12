@@ -16,48 +16,33 @@ __device__ void swap(float *dist, int *idx, int i, int j, int w) {
 
 
 __device__ int partition(float *dist_col, int *idx_col, int start, int end, int w) {
-    if (start == 8) {
-      printf("is called!\n");
-    }
+
     float pivot = dist_col[end*w];
     int i = start - 1;
 
     for (int j = start; j < end; j++) {
         if (dist_col[j*w] <= pivot) {
-            // if (end == 119) {
-            //   printf("next %.2f\n", dist_col[j*w]);
-            // }
             i++;
             swap(dist_col, idx_col, i, j, w);
         }
     }
     swap(dist_col, idx_col, i+1, end, w);
-    // if (end == 119) {
-    printf("Partitioning: start = %d, end = %d, pivot index = %d\n", start, end, i+1);
-    // }
+    
+    // printf("Partitioning: start = %d, end = %d, pivot index = %d\n", start, end, i+1);
     
     return i+1;
 }
 
 
 __device__ void quicksort(float *dist_col, int *idx_col, int start, int end, int w) {
-    printf("Quicksort called: start = %d, end = %d\n", start, end);
-    if (start < end) {
-      
-      int pivot_idx = partition(dist_col, idx_col, start, end, w);
-      
-
-      // Recursively sort the two parts
-      // printf("right part is %d, end is %d\n", pivot_idx + 1, end);
-      if (pivot_idx == 7) {
-        printf("ready to call sort1\n");
-      }
-      quicksort(dist_col, idx_col, start, pivot_idx - 1, w);
-      if (pivot_idx == 7) {
-        printf("return from sort1\n");
-      }
-      quicksort(dist_col, idx_col, pivot_idx + 1, end, w);
-    }
+    // printf("Quicksort called: start = %d, end = %d\n", start, end);
+    
+    if (start >= end) return;
+    int pivot_idx = partition(dist_col, idx_col, start, end, w);
+    
+    // Recursively sort the two parts
+    quicksort(dist_col, idx_col, start, pivot_idx - 1, w);
+    quicksort(dist_col, idx_col, pivot_idx + 1, end, w);
 }
 
 
@@ -161,11 +146,28 @@ __global__ void calDistance_kernel(float *A, float *B, float *dist, unsigned int
 __global__ void sortDistance_kernel(float *dist, int *idx, unsigned int w, unsigned int h, unsigned int k) {
     unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
-    if (tid == 0) {
+    if (tid < w) {
         float* dist_col = dist + tid;
         int* idx_col = idx + tid;
         // find the kth smallest element in dist and return their corresponding idx with quicksort
-        quicksort(dist_col, idx_col, 0, h-1, w); 
+        // quicksort(dist_col, idx_col, 0, h-1, int w);
+        //
+        // some unexpected problem happened on quicksort, we change it to bubble sort, the answer is correct, with some sacrifices to runtime.
+        int i, j;
+        bool swapped;
+        for (i = 0; i < h - 1; i++) {
+            swapped = false;
+            for (j = 0; j < h - i - 1; j++) {
+                if (dist_col[j*w] > dist_col[(j+1)*w]) {
+                    // swap(arr[j], arr[j + 1]);
+                    swap(dist_col, idx_col, j, j+1, w);
+                    swapped = true;
+                }
+            }
+
+            if (swapped == false)
+                break;
+        }
         
     }
 }
@@ -187,17 +189,11 @@ void KNN(float *A,
     int blk_dim_sort = (nB + thrd_per_blk_sort -1) / thrd_per_blk_sort;
 
     calDistance_kernel<<<blk_dim_cal, thrd_per_blk_cal>>>(A, B, dist, nA, nB, dim);
-    
-    // cout << "Distance Matrix in KNN.CU:" << endl;
-    // for (unsigned int i=0; i<20; i++) {
-    //   cout << dist[i] << " ";
-    // }
-    // there is no output may be attribute to asyn in cpu & gpu
-
-    sortDistance_kernel<<<1, thrd_per_blk_sort>>>(dist, idx, nB, nA, k);
+    sortDistance_kernel<<<blk_dim_sort, thrd_per_blk_sort>>>(dist, idx, nB, nA, k);
 
     cudaDeviceSynchronize();
 
+    // cout << "below is distance matrix" << endl;
     // for (int i = 0; i < nA; ++i) {
     //     for (int j = 0; j < nB; ++j) {
     //         cout << dist[i*nB + j] << " ";
